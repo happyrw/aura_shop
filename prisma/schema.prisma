@@ -1,0 +1,292 @@
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String    @id @default(cuid()) @map("_id")
+  firstName     String?
+  lastName      String?
+  location      String?
+  email         String    @unique
+  password      String?
+  imageUrl      String?
+  emailVerified DateTime?
+
+  accounts    Account[]
+  orders      Order[]
+  reviews     Review[]
+  cart        Cart?
+  wishlist    Wishlist?
+  business    Business[]
+  members     Member[]
+  testimonies Testimony[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Testimony {
+  id        String @id @default(cuid()) @map("_id")
+  location  String
+  testimony String
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                String   @id @default(cuid()) @map("_id")
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Business {
+  id                  String  @id @default(cuid()) @map("_id")
+  businessName        String
+  businessDescription String
+  industry            String
+  productCategory     String
+  website             String?
+  imageUrl            String
+
+  products   Product[]
+  members    Member[]
+  newArrival NewArrivalProduct[]
+  discount   DiscountProduct[]
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index(ownerId)
+}
+
+enum MemberRole {
+  ADMIN
+  GUEST
+}
+
+model Member {
+  id   String     @id @default(cuid()) @map("_id")
+  role MemberRole @default(GUEST)
+
+  products   Product[]
+  newArrival NewArrivalProduct[]
+  discount   DiscountProduct[]
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, businessId])
+}
+
+model Product {
+  id          String @id @default(cuid()) @map("_id")
+  name        String
+  description String
+  price       Float
+  category    String
+  subcategory String
+  item        String
+  size        String
+  stock       Int
+
+  images    String[]
+  reviews   Review[]
+  OrderItem OrderItem[]
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model NewArrivalProduct {
+  id          String @id @default(cuid()) @map("_id")
+  name        String
+  description String
+  price       Float
+  category    String
+  subcategory String
+  item        String
+  size        String
+  stock       Int
+
+  images    String[]
+  reviews   Review[]
+  OrderItem OrderItem[]
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DiscountProduct {
+  id          String @id @default(cuid()) @map("_id")
+  name        String
+  description String
+  price       Float
+  category    String
+  subcategory String
+  item        String
+  size        String
+  stock       Int
+
+  images    String[]
+  reviews   Review[]
+  OrderItem OrderItem[]
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Order {
+  id              String      @id @default(cuid()) @map("_id")
+  userId          String
+  order_date      DateTime    @default(now())
+  status          String
+  total_amount    Float
+  shippingAddress String
+  billingAddress  String
+  payment_details String
+  order_items     OrderItem[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model OrderItem {
+  id        String @id @default(cuid()) @map("_id")
+  orderId   String
+  productId String
+  quantity  Int
+  price     Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order               Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product             Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  NewArrivalProduct   NewArrivalProduct? @relation(fields: [newArrivalProductId], references: [id])
+  newArrivalProductId String?
+  DiscountProduct     DiscountProduct?   @relation(fields: [discountProductId], references: [id])
+  discountProductId   String?
+}
+
+model Cart {
+  id           String @id @default(cuid()) @map("_id")
+  userId       String @unique
+  products     Json // Use a JSON field to store product details and quantities
+  total_amount Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id        String   @id @default(cuid()) @map("_id")
+  userId    String
+  productId String
+  rating    Int
+  comment   String
+  date      DateTime @default(now())
+
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product             Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  NewArrivalProduct   NewArrivalProduct? @relation(fields: [newArrivalProductId], references: [id])
+  newArrivalProductId String?
+  DiscountProduct     DiscountProduct?   @relation(fields: [discountProductId], references: [id])
+  discountProductId   String?
+}
+
+model Wishlist {
+  id         String   @id @default(cuid()) @map("_id")
+  userId     String   @unique
+  productIds String[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Contact {
+  id        String   @id @default(cuid()) @map("_id")
+  name      String
+  email     String   @unique
+  subject   String
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model Promotion {
+  id          String   @id @default(cuid()) @map("_id")
+  title       String
+  description String
+  image       String
+  link        String
+  start_date  DateTime
+  end_date    DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BlogPost {
+  id           String   @id @default(cuid()) @map("_id")
+  title        String
+  content      String
+  author       String
+  publish_date DateTime @default(now())
+  tags         String[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
